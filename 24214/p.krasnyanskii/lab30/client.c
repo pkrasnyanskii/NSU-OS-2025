@@ -38,3 +38,4 @@ int main(int argc, char** argv){
         write(server_sock_fd, "\n", 1);
         if(close(server_sock_fd)) {perror("socket close");}
 }
+
