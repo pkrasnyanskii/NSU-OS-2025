@@ -15,16 +15,16 @@ void openFile(FILE *in){
 }
 
 int main(){
-         printf("\n");
-         FILE* in;
+        printf("\n");
+        FILE* in;
+        
+        getIds();
+        openFile(in);
 
-         getIds();
-         openFile(in);
+        setuid(getuid());
 
-         setuid(getuid());
+        getIds();
+        openFile(in);
 
-         getIds();
-         openFile(in);
-
-         return 0;
+        return 0;
 }
