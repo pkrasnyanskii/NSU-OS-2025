@@ -1,41 +1,39 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <stdio.h>
 #include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
-#include <ctype.h>
-#include <netdb.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argc, char** argv){
-        if (argc != 4){
-                printf("usage: %s hostname port text\n", argv[0]);
-                return EXIT_FAILURE;
-        }
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("usage: %s <text>\n", argv[0]);
+        return 1;
+    }
 
-        int server_sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (server_sock_fd == -1){
-                perror("Socket creation error");
-        }
+    const char *SOCK_PATH = "/tmp/lab30_socket";
 
-        struct hostent* server;
-        server = gethostbyname(argv[1]);
-        if (!server){
-                perror("gethostbyname");
-                return EXIT_FAILURE;
-        }
-        struct sockaddr_in server_addr = { AF_INET, htons(atoi(argv[2])), };
-        bcopy((char *)server->h_addr, (char *)&server_addr.sin_addr.s_addr, server->h_length);
+    int sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sock_fd < 0) {
+        perror("socket");
+        return 1;
+    }
 
-        if (connect(server_sock_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1){
-                perror("connect");
-                return EXIT_FAILURE;
-        }
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, SOCK_PATH);
 
-        write(server_sock_fd, argv[3], strlen(argv[3]));
-        write(server_sock_fd, "\n", 1);
-        if(close(server_sock_fd)) {perror("socket close");}
+    if (connect(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("connect");
+        return 1;
+    }
+
+    write(sock_fd, argv[1], strlen(argv[1]));
+    write(sock_fd, "\n", 1);
+
+    close(sock_fd);
+
+    return 0;
 }
-

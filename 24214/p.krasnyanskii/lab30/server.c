@@ -1,53 +1,53 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <stdio.h>
 #include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argc, char** argv){
-        if (argc != 2){
-                printf("usage: %s port_number\n", argv[0]);
-                return EXIT_FAILURE;
-        }
+int main() {
+    const char *SOCK_PATH = "/tmp/lab30_socket";
 
-        int server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("socket");
+        return 1;
+    }
 
-        if (server_sockfd == -1){
-                perror("Socket creation error");
-        }
+    struct sockaddr_un addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, SOCK_PATH);
 
-        struct sockaddr_in server_addr = { AF_INET, htons(atoi(argv[1])), INADDR_ANY };
+    unlink(SOCK_PATH);
 
-        if (bind(server_sockfd, (struct sockaddr*) &server_addr, sizeof(server_addr)) == -1){
-                perror("Bind failed");
-                return EXIT_FAILURE;
-        }
+    if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("bind");
+        return 1;
+    }
 
+    if (listen(server_fd, 5) < 0) {
+        perror("listen");
+        return 1;
+    }
 
-        if (listen(server_sockfd, 10)){
-                perror("listen");
-                return EXIT_FAILURE;
-        }
+    int client_fd = accept(server_fd, NULL, NULL);
+    if (client_fd < 0) {
+        perror("accept");
+        return 1;
+    }
 
-         struct sockaddr_in client_addr;
-        socklen_t client_addr_len = sizeof(client_addr);
-        int client_sock_fd = accept(server_sockfd, (struct sockaddr*) &client_addr, &client_addr_len);
-        if (client_sock_fd == -1){
-                perror("accept");
-                return EXIT_FAILURE;
-        }
+    char c;
+    while (read(client_fd, &c, 1) > 0) {
+        c = toupper((unsigned char)c);
+        write(STDOUT_FILENO, &c, 1);
+    }
 
-        char buf;
-        while (read(client_sock_fd, &buf, 1) > 0){
-                buf = toupper(buf);
-                write(STDOUT_FILENO, &buf, 1);
-        }
+    close(client_fd);
+    close(server_fd);
+    unlink(SOCK_PATH);
 
-        if (close(client_sock_fd)) {perror("client socket close");}
-        if (close(server_sockfd)) {perror("client socket close");}
+    return 0;
 }
-
